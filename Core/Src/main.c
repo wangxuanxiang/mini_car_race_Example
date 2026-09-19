@@ -51,12 +51,10 @@ SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_rx;
 DMA_HandleTypeDef hdma_spi1_tx;
 DMA_HandleTypeDef hdma_tim1_up;
-
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
-
 UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN PV */
@@ -236,8 +234,8 @@ int main(void)
   Init_brushless_motor(); //等待无刷电调负压启动完成
   /* USER CODE BEGIN 2 */
   dodo_BMI270_init(); // 初始化陀螺仪
-  TIM1->CCR1 = 4000;
-  TIM1->CCR2 = 4000;
+  TIM1->CCR1 = 2000;
+  TIM1->CCR2 = 2000;
   // 延时5000秒，等待无刷电调初始化
   // TIM1->PSC = 0;
 
