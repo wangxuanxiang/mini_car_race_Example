@@ -80,8 +80,8 @@ TIM1 的 CH1/CH2 已经被左右电机 PWM 占用，PA11 上**没有可用的定
 2. `ESC_BuildDmaTable(9)` 建表 → 0.9 ms 高电平 / 20 ms 帧
 3. 启动 DMA（循环模式）并使能 `TIM_DMA_UPDATE`，DMA 每个更新事件搬 1 个字，200 个字刚好 20 ms 一轮
 4. 每帧完成进一次 `ESC_DmaTransferComplete()` 中断，累计到 100 帧（**2 秒**）后：
-   - [`IF_start_Brushless_motor == 1`](readme.md?plain=1#L83) → `ESC_SetPulseWidth(20)`，输出 **2.0 ms 满油门**,如不按流程启动会出现异常报警
-   - [`IF_start_Brushless_motor == 0`](readme.md?plain=1#L84) → `ESC_SetPulseWidth(10)`，输出 **1.0 ms 停车**,如不按流程停车会出现异常报警
+   - [`IF_start_Brushless_motor == 1`] → `ESC_SetPulseWidth(20)`，输出 **2.0 ms 满油门**,如不按流程启动会出现异常报警
+   - [`IF_start_Brushless_motor == 0`] → `ESC_SetPulseWidth(10)`，输出 **1.0 ms 停车**,如不按流程停车会出现异常报警
    - 关掉 DMA 传输完成中断，此后波形由 DMA 硬件持续输出，不再占用中断
 5. 主函数用 `while (esc_period_count < ESC_START_PERIODS) HAL_Delay(200);` 阻塞等待解锁完成
 
@@ -104,7 +104,7 @@ TIM1 的 CH1/CH2 已经被左右电机 PWM 占用，PA11 上**没有可用的定
 
 > ⚠️ 负压风扇震动会导致IMU数据比无负压波动大（大概9-10倍），上负压的组需要做好准备，可能需要自行通过滤波等方法解决IMU零漂等问题
 
-> ⚠️ 若负压风扇启动异常报警（常为发出滴滴滴的声音并不断起停），则为初始化错误查看是否按照流程初始化，详见[readme.md?plain=1#L77]
+> ⚠️ 若负压风扇启动异常报警（常为发出滴滴滴的声音并不断起停），则为初始化错误查看是否按照流程初始化,启动流程
 ---
 
 ## 4. BMI270 六轴陀螺仪 / 加速度计
