@@ -14,6 +14,7 @@
  * If no LICENSE file comes with this software, it is provided AS-IS.
  *
  * 本文件内含BMI270陀螺仪的使用示例
+ * 本文件内含无刷电桥的启动初始化的使用示例
  ******************************************************************************
  */
 /* USER CODE END Header */
@@ -37,7 +38,7 @@
 /* 陀螺仪调试打印开关。置 1 会引入约 5.4 kB 的浮点 printf 代码，
    MDK-Lite 的 32 kB 链接上限会因此报 L6047U 而链接失败。
    平时保持 0；要串口看数据时改成 1（并注意镜像大小）。 */
-#define GYRO_DEBUG 0
+#define GYRO_DEBUG 1
 #define IF_start_Brushless_motor 1 //是否启动无刷电机，1为启动，0为不启动
 /* USER CODE END PD */
 
@@ -253,7 +254,8 @@ int main(void)
     accel_x = BMI270_acc_transition(BMI270_accel_x); // 将原始加速度计数据转换为物理值，单位为g，一般不需要使用此数据
     accel_y = BMI270_acc_transition(BMI270_accel_y);
     accel_z = BMI270_acc_transition(BMI270_accel_z);
-    printf("%f,%f,%f,%f,%f,%f\r\n",gyro_x,gyro_y,gyro_z,accel_x,accel_y,accel_z);
+    if (GYRO_DEBUG)
+      printf("%f,%f,%f,%f,%f,%f\r\n",gyro_x,gyro_y,gyro_z,accel_x,accel_y,accel_z);
     // 以下为读取光电管的示例（从左到右编号0~11）
     //  uint16_t mux_value;
     //  MUX_get_value(&mux_value);
