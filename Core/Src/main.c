@@ -165,34 +165,19 @@ void Init_brushless_motor(void)
   /* PA11 idles low: the first high level then also lasts exactly 0.9 ms,
      because the DMA writes the first slot 0.1 ms after TIM1 is started. */
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
+  ESC_BuildDmaTable(ESC_START_PULSE_SLOTS);
+  esc_period_count = 0U;
+  hdma_tim1_up.XferCpltCallback = ESC_DmaTransferComplete;
+  if (HAL_DMA_Start_IT(&hdma_tim1_up,(uint32_t)esc_dma_table,(uint32_t)&GPIOA->BSRR,ESC_PULSE_SLOTS) != HAL_OK)
+    Error_Handler();
+  __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
+  __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
   if (IF_start_Brushless_motor)
-  {
-    ESC_BuildDmaTable(ESC_START_PULSE_SLOTS);
-    esc_period_count = 0U;
-    hdma_tim1_up.XferCpltCallback = ESC_DmaTransferComplete;
-    if (HAL_DMA_Start_IT(&hdma_tim1_up,(uint32_t)esc_dma_table,(uint32_t)&GPIOA->BSRR,ESC_PULSE_SLOTS) != HAL_OK)
-    {
-      Error_Handler();
-    }
-    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
     while (esc_period_count < ESC_START_PERIODS)
       HAL_Delay(200);//等待无刷电桥负压启动完成
-  }
   else
-  {
-    ESC_BuildDmaTable(ESC_START_PULSE_SLOTS);
-    esc_period_count = 0U;
-    hdma_tim1_up.XferCpltCallback = ESC_DmaTransferComplete;
-    if (HAL_DMA_Start_IT(&hdma_tim1_up,(uint32_t)esc_dma_table,(uint32_t)&GPIOA->BSRR,ESC_PULSE_SLOTS) != HAL_OK)
-    {
-      Error_Handler();
-    }
-    __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-    __HAL_TIM_ENABLE_DMA(&htim1, TIM_DMA_UPDATE);
     while (esc_period_count < ESC_START_PERIODS)
       HAL_Delay(200);//等待无刷电桥负压启动完成
-  }
 }
 /**
  * @brief  The application entry point.
