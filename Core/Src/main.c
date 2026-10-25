@@ -68,7 +68,7 @@ UART_HandleTypeDef huart3;
 
 static uint32_t esc_dma_table[ESC_PULSE_SLOTS];
 static uint32_t esc_high_slots;    /* high time currently stored in the table */
-static uint32_t esc_period_count;
+static volatile uint32_t esc_period_count;
 
 /* Fill a whole 20 ms frame.  Only used once, before the DMA is started. */
 static void ESC_BuildDmaTable(uint32_t high_slots)
@@ -175,9 +175,8 @@ void Init_brushless_motor(void)
   if (IF_start_Brushless_motor)
     while (esc_period_count < ESC_START_PERIODS)
       HAL_Delay(200);//等待无刷电桥负压启动完成
-  else
-    while (esc_period_count < ESC_START_PERIODS)
-      HAL_Delay(200);//等待无刷电桥负压启动完成
+  /* Disabled fan: return immediately; DMA completes the existing
+     0.9 ms -> 1.0 ms idle-signal sequence in the background. */
 }
 /**
  * @brief  The application entry point.
@@ -220,8 +219,8 @@ int main(void)
   Init_brushless_motor(); //等待无刷电调负压启动完成
   /* USER CODE BEGIN 2 */
   dodo_BMI270_init(); // 初始化陀螺仪
-  TIM1->CCR1 = 2000;
-  TIM1->CCR2 = 2000;
+  //TIM1->CCR1 = 2000;
+  //TIM1->CCR2 = 2000;
   // 延时5000秒，等待无刷电调初始化
   // TIM1->PSC = 0;
 
@@ -638,6 +637,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : GPIO_RUN_Pin */
+  GPIO_InitStruct.Pin = GPIO_RUN_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIO_RUN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : L_DIR_Pin */
   GPIO_InitStruct.Pin = L_DIR_Pin;

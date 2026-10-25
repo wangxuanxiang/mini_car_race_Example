@@ -1,0 +1,36 @@
+# Keil compiler/linker outputs (keep source, project and scatter files)
+/MDK-ARM/**/*.o
+/MDK-ARM/**/*.obj
+/MDK-ARM/**/*.d
+/MDK-ARM/**/*.dep
+/MDK-ARM/**/*.crf
+/MDK-ARM/**/*.axf
+/MDK-ARM/**/*.elf
+/MDK-ARM/**/*.hex
+/MDK-ARM/**/*.bin
+/MDK-ARM/**/*.map
+/MDK-ARM/**/*.lst
+/MDK-ARM/**/*.lnp
+/MDK-ARM/**/*.htm
+/MDK-ARM/**/*.html
+/MDK-ARM/**/*.plg
+/MDK-ARM/**/*.rpt
+/MDK-ARM/**/*.tra
+/MDK-ARM/**/*.iex
+/MDK-ARM/**/*.__i
+
+# Keil per-user UI state and temporary/backup files
+*.uvguix.*
+*.uvgui.*
+/MDK-ARM/**/*.bak
+/MDK-ARM/**/*.orig
+/MDK-ARM/**/*.tmp
+/MDK-ARM/**/JLinkLog.txt
+
+# Keil Assistant build logs and locks; keep VS Code configuration JSON
+/.vscode/*.log
+/.vscode/*.log.lock
+/MDK-ARM/.vscode/*.log
+/MDK-ARM/.vscode/*.log.lock
+
+# Intentionally keep *.uvprojx, *.uvoptx, *.sct, *.ioc, RTE/ and DebugConfig/.

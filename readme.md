@@ -30,6 +30,21 @@
 
 ---
 
+## 发车键 GPIO_RUN
+
+example 和 test 均将 **PB14** 标记为 `GPIO_RUN`，配置为普通 GPIO 输入、`GPIO_NOPULL`（无内部上下拉），不启用 EXTI 中断。`micro_smartcar.ioc` 已同步该标签。
+
+```c
+#define GPIO_RUN_Pin GPIO_PIN_14
+#define GPIO_RUN_GPIO_Port GPIOB
+
+GPIO_PinState run_level = HAL_GPIO_ReadPin(GPIO_RUN_GPIO_Port, GPIO_RUN_Pin);
+```
+
+`GPIO_RUN` 是发车键的逻辑名称，实际端口仍是 GPIOB、第 14 脚；其他 GPIOB 引脚不改名。example 仅配置引脚，不加入按键等待；test 的 `_Start_()` 使用上述宏读取按键，两次读到低电平、间隔 20 ms 后继续启动。
+
+输入空闲电平由外部电路提供；若按键仅接 PB14 和 GND，需要外部上拉，或另行改为内部上拉。
+
 ## 2. 时钟与系统配置
 
 | 项目 | 值 |
@@ -83,7 +98,7 @@ TIM1 的 CH1/CH2 已经被左右电机 PWM 占用，PA11 上**没有可用的定
    - [`IF_start_Brushless_motor == 1`] → `ESC_SetPulseWidth(20)`，输出 **2.0 ms 满油门**,如不按流程启动会出现异常报警
    - [`IF_start_Brushless_motor == 0`] → `ESC_SetPulseWidth(10)`，输出 **1.0 ms 停车**,如不按流程停车会出现异常报警
    - 关掉 DMA 传输完成中断，此后波形由 DMA 硬件持续输出，不再占用中断
-5. 主函数用 `while (esc_period_count < ESC_START_PERIODS) HAL_Delay(200);` 阻塞等待解锁完成
+5. 仅当 `IF_start_Brushless_motor == 1` 时，使用 `while (esc_period_count < ESC_START_PERIODS) HAL_Delay(200);` 等待约 2 秒。设为 `0` 时，初始化函数启动 DMA 后立即返回，0.9 ms → 1.0 ms 的信号切换在后台完成，不阻塞后续程序。
 
 > **注意**：`ESC_BuildDmaTable` 填的表与 DMA 是**按索引顺序**消费的，
 > 而 `ESC_SetPulseWidth` 只改动真正变化的那一段且按索引递增顺序改，
@@ -98,7 +113,7 @@ TIM1 的 CH1/CH2 已经被左右电机 PWM 占用，PA11 上**没有可用的定
 ```
 
 - **置 1**：负压启动（2 秒解锁后进入 2.0 ms 满油门）
-- **置 0**：负压关闭（2 秒解锁后输出 1.0 ms 停车信号）
+- **置 0**：负压关闭，主程序不等待这 2 秒；DMA 在后台输出 0.9 ms 信号约 2 秒，再保持 1.0 ms 停车信号。按键等待和 IMU 初始化等其他耗时不受该开关控制。
 
 > ⚠️ 上电即满油门有安全风险（桨叶/电机突然启动）。调试时建议先置 0，确认接线与方向无误后再改 1。
 
