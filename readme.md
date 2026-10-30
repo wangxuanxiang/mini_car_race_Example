@@ -24,9 +24,9 @@
 | BMI270 六轴陀螺仪/加速度计 | SPI1 + DMA1_CH2/CH3 | PA4(CS) PA5(SCK) PA6(MISO) PA7(MOSI) | ✅ 已实现 |
 | 光电管阵列（12 路） | GPIO 4 位地址 + 1 位数据 | PA12(读) PA15/PB3/PB8/PB9(地址) | ✅ 已实现 |
 | 电机 PWM | TIM1 CH1 / CH2 | PA8(L_PWM) PA9(R_PWM) | ⚠️ 已配置，无控制逻辑 |
-| 编码器测速 | TIM3 / TIM4 编码器模式 | PB4/PB5(右) PB6/PB7(左) | ⚠️ 已配置，无读取逻辑 |
+| 编码器测速 | TIM3 / TIM4 编码器模式 | PB4/PB5(左) PB6/PB7(右) | ⚠️ 已配置，无读取逻辑 |
 | 串口调试 | USART3 | PB10(TX) PB11(RX) | ✅ printf 输出可用 |
-| 周期任务定时器 | TIM2（1 kHz 中断） | — | ⚠️ 已配置，中断回调为空 |
+| 周期任务定时器 | TIM2（1 kHz 中断） | — | ⚠️ 已配置，未启动，需编写回调 |
 
 ---
 
@@ -73,8 +73,8 @@ GPIO_PinState run_level = HAL_GPIO_ReadPin(GPIO_RUN_GPIO_Port, GPIO_RUN_Pin);
 
 ### 3.2 为什么用 GPIO + DMA 而不是硬件 PWM
 
-TIM1 的 CH1/CH2 已经被左右电机 PWM 占用，PA11 上**没有可用的定时器通道**（不走重映射就无法让 TIM1_CH4 出现在 PA11），
-因此这里采用「**定时器更新事件 + DMA 写 BSRR**」的方式软件合成 50 Hz 波形：
+PA11 默认支持 **TIM1_CH4**，不需要重映射。但 TIM1 各通道共享计数器、预分频和自动重装载周期：左右电机需要 **10 kHz** PWM，电调需要 **50 Hz**，不能直接用同一 TIM1 的普通 PWM 通道分别设置这两个周期。
+因此保持 TIM1 的 10 kHz 配置，采用「**定时器更新事件 + DMA 写 GPIOA BSRR**」的方式在 PA11 合成 50 Hz 波形。
 
 | 参数 | 值 | 说明 |
 |---|---|---|
@@ -276,10 +276,13 @@ TIM1->CCR2 = 2000;    // 右电机占空比 = 2000 / 7200 ≈ 27.8 %
 
 ### 6.3 TIM3 / TIM4 —— 正交编码器测速
 
-| 定时器 | 通道 | 引脚 | 对应 |
+| 定时器 | 通道 | 引脚 | 对应（实测） |
 |---|---|---|---|
-| **TIM3** | CH1 / CH2 | **PB4（R_ENCODER_B）/ PB5（R_ENCODER_A）** | 右轮 |
-| **TIM4** | CH1 / CH2 | **PB6（L_ENCODER_B）/ PB7（L_ENCODER_A）** | 左轮 |
+| **TIM3** | CH1 / CH2 | **PB4（L_ENCODER_B）/ PB5（L_ENCODER_A）** | 左轮 |
+| **TIM4** | CH1 / CH2 | **PB6（R_ENCODER_B）/ PB7（R_ENCODER_A）** | 右轮 |
+
+> 已按 test 实测接线统一标签：**TIM3（PB4/PB5）为左轮，TIM4（PB6/PB7）为右轮**。
+> 宏定义、CubeMX 标签和初始化/反初始化引用均已同步；test 仍按 TIM3 正读、TIM4 取负读取，保持已验证的计数方向。
 
 - 模式：`TIM_ENCODERMODE_TI12`（**双通道正交，4 倍频**）
 - `Prescaler = 0`、`Period = 65535` → **16 位计数器**，溢出后回绕
@@ -289,7 +292,7 @@ TIM1->CCR2 = 2000;    // 右电机占空比 = 2000 / 7200 ≈ 27.8 %
 读数方式（示例未实现，供你补全）：
 
 ```c
-int16_t cnt = (int16_t)__HAL_TIM_GET_COUNTER(&htim3);   // 右轮计数增量
+int16_t cnt = (int16_t)__HAL_TIM_GET_COUNTER(&htim3);   // 左轮计数增量
 __HAL_TIM_SET_COUNTER(&htim3, 0);                        // 清零，下一周期再读
 ```
 
@@ -305,8 +308,15 @@ __HAL_TIM_SET_COUNTER(&htim3, 0);                        // 清零，下一周�
 | 优先级 | 抢占 1 |
 | 用途 | 预留的固定周期控制任务时基 |
 
-**目前 `HAL_TIM_PeriodElapsedCallback()` 没有实现**：TIM2 中断虽然在 `stm32f1xx_hal_msp.c`
-里使能了 NVIC，但 `HAL_TIM_IRQHandler(&htim2)` 走到空回调后什么都不做——控制环需要在这里补。
+example 中 TIM2 已按 1 ms 周期配置，NVIC 也已使能，但主程序**未调用 `HAL_TIM_Base_Start_IT(&htim2)`**，因此目前没有周期性 TIM2 更新中断。用户需要实现 `HAL_TIM_PeriodElapsedCallback()`，并在控制所需外设和变量准备好之后启动：
+
+```c
+if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) {
+    Error_Handler();
+}
+```
+
+回调中应判断 `htim->Instance == TIM2`，再执行周期任务。仅使能 NVIC 或仅编写回调都不会自动启动定时器。
 
 ---
 
@@ -388,6 +398,15 @@ mini_car_race_Example/
 4. 串口助手连 USART3（**115200 8N1**）查看输出
 
 > `MDK-ARM/清除缓存文件.bat` 可用于清理编译产物。
+
+### Git 忽略与交付打包
+
+`.gitignore` 用于忽略 Keil 编译产物（`.o`、`.d`、`.axf`、`.hex`、`.map` 等）、日志、临时文件及个人 `.uvguix.*` 界面配置；源码、`.uvprojx`、`.uvoptx`、`.sct`、`.ioc`、RTE 与 DebugConfig 保留。
+
+- `.gitignore` 不删除本地文件，也不自动停止跟踪已经提交的文件；可用 `git ls-files -ci --exclude-standard` 检查仍被跟踪的忽略项。
+- **直接压缩工程目录不会应用 `.gitignore`**，也可能带上隐藏的 `.git`、旧编译产物和备份。交付时应明确排除它们。
+- 对已建立 Git 仓库的 example，可在确认待交付修改已提交后执行 `git archive --format=zip --output=../mini_car_race_Example-source.zip HEAD`，导出当前提交的文件且不含 `.git`。它不包含尚未提交的修改，也不会自动剔除误提交的编译产物。
+- `.git` 是版本历史，不是需要添加到 `.gitignore` 的业务文件；不要为打包而删除本地 `.git`。
 
 ### 内存占用提醒
 

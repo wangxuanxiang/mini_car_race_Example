@@ -219,6 +219,7 @@ int main(void)
   Init_brushless_motor(); //等待无刷电调负压启动完成
   /* USER CODE BEGIN 2 */
   dodo_BMI270_init(); // 初始化陀螺仪
+  //pwm示例
   //TIM1->CCR1 = 2000;
   //TIM1->CCR2 = 2000;
   // 延时5000秒，等待无刷电调初始化
@@ -248,7 +249,6 @@ int main(void)
     //  }
     //  printf("\n");
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
