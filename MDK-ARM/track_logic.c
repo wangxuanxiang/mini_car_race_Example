@@ -48,12 +48,17 @@ static uint32_t s_last_ms;
 static uint8_t  s_armed;        /* 允许触发新特征 */
 static uint8_t  s_zero_active;  /* 边缘归零计时 */
 static uint32_t s_zero_t0;
+static uint32_t s_cooldown_until;   /* 出环冷却结束时刻 */
 
 static uint8_t  s_feat_dir;     /* 0=无 1=左 2=右；环岛候选方向 */
 static uint32_t s_feat_t0;
 
 static uint8_t  s_ra_dir;
 static float    s_ra_entry_heading;
+static float    s_ra_net_max;
+static float    s_ra_comp;
+static uint8_t  s_ra_inner;
+static float    s_ra_inner_min;
 static uint32_t s_ra_t0;
 
 /* ---------------- 初始化 / 陀螺仪零偏 ---------------- */
@@ -71,12 +76,17 @@ void track_init(void)
     s_armed = 1U;
     s_zero_active = 0U;
     s_zero_t0 = 0U;
+    s_cooldown_until = 0U;
 
     s_feat_dir = 0U;
     s_feat_t0 = 0U;
 
     s_ra_dir = 0U;
     s_ra_entry_heading = 0.0f;
+    s_ra_net_max = 0.0f;
+    s_ra_comp = 0.0f;
+    s_ra_inner = 0U;
+    s_ra_inner_min = 0.0f;
     s_ra_t0 = 0U;
 
     dbg_state = 0U;
@@ -141,6 +151,11 @@ static void tl_start_ra(uint8_t dir, uint32_t now)
     dbg_ra_dir = dir;
     s_ra_dir = dir;
     s_ra_entry_heading = s_yaw;
+    s_ra_net_max = 0.0f;
+    s_ra_comp = 0.0f;
+    s_ra_inner = 0U;
+    s_ra_inner_min = 0.0f;
+    dbg_ra_turned = 0.0f;   /* 新环岛从 0 开始打印 */
     s_ra_t0 = now;
     s_state = TS_RA_ENTRY;
     s_armed = 0U;
@@ -169,7 +184,8 @@ void track_update(const track_input_t *in, track_output_t *out)
         if (!s_zero_active) {
             s_zero_active = 1U;
             s_zero_t0 = now;
-        } else if ((now - s_zero_t0) >= 20U) {
+        } else if ((now - s_zero_t0) >= 20U &&
+                   now >= s_cooldown_until) {
             s_armed = 1U;
         }
     } else {
@@ -235,13 +251,35 @@ void track_update(const track_input_t *in, track_output_t *out)
     }
 
     case TS_RA_RUN: {
-        float turned = tl_dir_sign(s_ra_dir) * (s_yaw - s_ra_entry_heading);
+        /* 净转角 + 内环补偿：内环结束再补实际下降量 */
+        float net = tl_dir_sign(s_ra_dir) * (s_yaw - s_ra_entry_heading);
+
+        if (!s_ra_inner) {
+            if ((s_ra_net_max - net) >= TL_RA_INNER_DETECT_DEG) {
+                /* 进入内环：开始记录最低点 */
+                s_ra_inner = 1U;
+                s_ra_inner_min = net;
+            } else if (net > s_ra_net_max) {
+                s_ra_net_max = net;
+            }
+        } else {
+            if (net < s_ra_inner_min) {
+                s_ra_inner_min = net;
+            }
+            if (net > (s_ra_inner_min + TL_RA_INNER_END_DEG)) {
+                /* 内环结束：补偿实际下降的净角 */
+                s_ra_comp += (s_ra_net_max - s_ra_inner_min);
+                s_ra_net_max = s_ra_inner_min;
+                s_ra_inner = 0U;
+            }
+        }
+
+        float turned = net + s_ra_comp;
         dbg_ra_turned = turned;
 
         out->override = 0U;   /* 环内用 PPDD * 1.0，不用1.5 */
 
-        if (turned >= TL_RA_EXIT_YAW_DEG ||
-            (now - s_ra_t0) > TL_RA_TIMEOUT_MS) {
+        if (turned >= TL_RA_EXIT_YAW_DEG) {
             s_state = TS_RA_EXIT;
             s_ra_t0 = now;
         }
@@ -257,6 +295,7 @@ void track_update(const track_input_t *in, track_output_t *out)
             (now - s_ra_t0) > TL_RA_EXIT_TIMEOUT_MS) {
             s_state = TS_NORMAL;
             s_armed = 0U;
+            s_cooldown_until = now + TL_RA_COOLDOWN_MS;
         }
         break;
     }

@@ -22,14 +22,14 @@
 #define R_SPEED_KD 0.0f
 
 //目标速度
-#define TARGET_SPEED 30.0f
+#define TARGET_SPEED 25.0f
 
 /* 入弯前降速 + 前馈制动参数 */
 #define BRAKE_MS      0U     /* 制动脉冲时间 ms */
 #define SLOW_MS       400U    /* 弯中低速窗口 ms */
 #define BRAKE_SPEED   2.0f    /* 制动目标速度（>0.5 才能允许反向制动） */
-#define SLOW_SPEED    8.0f   /* 弯中目标速度 */
-#define FORCE_SLOW_DIST_CM  9000.0f   /* 0.9m 没触发降速，强制降一次 */
+#define SLOW_SPEED    25.0f   /* 弯中目标速度 */
+#define TL_NEG_MAX    4.0f   /* 减速转弯时允许的负内轮限幅 */
 
 //速度积分限幅
 #define SPEED_I_MAX 2000.0f
@@ -123,6 +123,9 @@ void stopPWM(motor_t motor){
 
 //计算光电管中心位置偏差
 float calculate_line_position(uint16_t mux_value){
+    static uint8_t  last_valid_active = 0U;
+    static float    last_valid_pos    = 0.0f;
+
     weighted_sum=0.0f;
     active_count=0;
     for(uint8_t i=0;i<12;i++){
@@ -133,9 +136,19 @@ float calculate_line_position(uint16_t mux_value){
         }
     }
     if(active_count==0){
+        /* 丢线：上次 active<=3 且 |偏移|<=0.5 时，固定向右 */
+        float p = last_valid_pos;
+        if(p < 0.0f) p = -p;
+
+        if(last_valid_active <= 3U && p <= 0.5f){
+            return 0.1f;
+        }
         return last_position_error;
     }
-    return weighted_sum/active_count;
+
+    last_valid_active = active_count;
+    last_valid_pos = weighted_sum/active_count;
+    return last_valid_pos;
 }
 
 //并联PID控制主函数
@@ -170,19 +183,8 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     uint32_t slow_now_ms = HAL_GetTick();
     uint8_t brake_active = 0U;
 
-    /* 0.9m 降速看门狗：只在 NORMAL 下累计里程 */
-    static float dist_since_slow_cm = 0.0f;
-    if (out.state != TS_NORMAL) {
-        dist_since_slow_cm = 0.0f;          /* 环岛等状态不计入 */
-    } else {
-        dist_since_slow_cm += in.d_cm;
-        if (dist_since_slow_cm < 0.0f) dist_since_slow_cm = 0.0f;
-    }
-
     if (out.state == TS_NORMAL && out.override == 0U &&
         in.active >= 6U && (in.left3 >= 1U || in.right3 >= 1U)) {
-
-        dist_since_slow_cm = 0.0f;   /* 正常触发降速，清零看门狗 */
 
         if (slow_now_ms >= slow_until) {
             /* 新的一次入弯：只触发一次制动 */
@@ -194,15 +196,6 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
         }
     }
 
-    /* 0.9m 没触发降速：强制降一次 */
-    if (out.state == TS_NORMAL && out.override == 0U &&
-        dist_since_slow_cm >= FORCE_SLOW_DIST_CM &&
-        slow_now_ms >= slow_until && slow_now_ms >= brake_until) {
-        brake_until = slow_now_ms + BRAKE_MS;
-        slow_until  = slow_now_ms + SLOW_MS;
-        dist_since_slow_cm = 0.0f;
-    }
-
     if (slow_now_ms < brake_until) {
         target_speed_now = BRAKE_SPEED;   /* 前馈制动：最大反拖 */
         brake_active = 1U;
@@ -210,6 +203,17 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
         target_speed_now = SLOW_SPEED;    /* 弯中低速 */
     } else {
         target_speed_now = TARGET_SPEED;  /* 直道恢复 */
+    }
+
+    /* 指定里程段限速：470~640 时目标速度 22 */
+    if (dbg_odom >= 470.0f && dbg_odom <= 640.0f) {
+        target_speed_now = 22.0f;
+    }
+
+    /* 指定里程段限速：2600~2800、5520~5750 时目标速度 17 */
+    if ((dbg_odom >= 2600.0f && dbg_odom <= 2800.0f) ||
+        (dbg_odom >= 5520.0f && dbg_odom <= 5750.0f)) {
+        target_speed_now = 17.0f;
     }
 
     //差速选择：
@@ -230,10 +234,18 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     debug1 = target_speed_now;
     debug2 = differential_speed;
 
+    /* 减速转弯时允许适度负内轮：只在 slow/brake 窗口内 */
+    uint8_t allow_neg = (slow_now_ms < slow_until || brake_active) ? 1U : 0U;
+    float neg_max = allow_neg ? TL_NEG_MAX : 0.0f;
+
     float tl = target_speed_now - differential_speed;
     float tr = target_speed_now + differential_speed;
-    if(tl < 0) tl = 0;
-    if(tr < 0) tr = 0;
+    if (tl < -neg_max) tl = -neg_max;
+    if (tr < -neg_max) tr = -neg_max;
+    if (!allow_neg) {
+        if (tl < 0.0f) tl = 0.0f;
+        if (tr < 0.0f) tr = 0.0f;
+    }
     motor_left.target_speed = tl;
     motor_right.target_speed = tr;
 
@@ -247,8 +259,8 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     float pwm_r = pid_calculate(&motor_right.speed_pid, motor_right.target_speed, motor_right.current_speed);
     pwm_l = constrain(pwm_l, PWM_MIN, PWM_MAX);
     pwm_r = constrain(pwm_r, PWM_MIN, PWM_MAX);
-    if (motor_left.target_speed  < 0.5f && pwm_l < 0.0f) pwm_l = 0.0f;
-    if (motor_right.target_speed < 0.5f && pwm_r < 0.0f) pwm_r = 0.0f;
+    if (motor_left.target_speed >= 0.0f && motor_left.target_speed < 0.5f && pwm_l < 0.0f) pwm_l = 0.0f;
+    if (motor_right.target_speed >= 0.0f && motor_right.target_speed < 0.5f && pwm_r < 0.0f) pwm_r = 0.0f;
     motor_left.pwm_output  = (int16_t)pwm_l;
     motor_right.pwm_output = (int16_t)pwm_r;
     setPWM(motor_left);
@@ -265,7 +277,11 @@ if ((now_ms - dbg_last) >= 50U) {
     for (i = 0U; i < 12U; i++) {
         bits = (uint16_t)((bits << 1) | (mux_array[i] ? 1U : 0U));
     }
-    printf("%f %u\r\n",line_position,(unsigned)active_count);
+    printf("%d,%d,%u,%.2f\r\n",
+           (int)dbg_odom,
+           (int)(dbg_edge_rise * 10.0f),
+           (unsigned)out.state,
+           dbg_ra_turned);
 
     // printf("%lu,%u,%u,%d,%d,%d,%d,%d,%d,%d,%03X,%d\r\n",
     //        (unsigned long)now_ms,              /* 1 时间 */
