@@ -31,7 +31,7 @@
 /* 只判“慢上升”。0.1m线宽、直道3~4路时：
  *   90°直角 ≈0cm，45°/60° ≈3~6cm，30°岔口 ≈10cm。
  * 先设7.0，实测后放在45°/60°和30°岔口之间。 */
-#define TL_EDGE_SLOW_CM         2.5f
+#define TL_EDGE_SLOW_CM         1.9f
 #define TL_FEATURE_CONFIRM_MS   4
 
 /* ================= 环岛 ================= */
@@ -46,7 +46,8 @@
 #define TL_RA_EXIT_KP           0.22f
 #define TL_RA_EXIT_DIFF_MAX     12.0f
 #define TL_RA_EXIT_TIMEOUT_MS   600
-#define TL_RA_COOLDOWN_MS       1000U   /* 出环后 1s 内禁止再次入环 */
+#define TL_RA_RUN_TIMEOUT_MS    4600U   /* 环内 5s 未出环：直接回 NORMAL，不打角 */
+#define TL_RA_COOLDOWN_MS       6000U   /* 出环后 1s 内禁止再次入环 */
 
 /* ================= 环岛入环方向 =================
  * 1 = 左入环（逆时针跑）

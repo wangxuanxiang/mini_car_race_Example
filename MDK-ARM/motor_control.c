@@ -136,12 +136,13 @@ float calculate_line_position(uint16_t mux_value){
         }
     }
     if(active_count==0){
-        /* 丢线：上次 active<=3 且 |偏移|<=0.5 时，固定向右 */
+        /* 丢线：上次 active<=3 且 |偏移|<=0.5，或 active==4 且居中 */
         float p = last_valid_pos;
         if(p < 0.0f) p = -p;
 
-        if(last_valid_active <= 3U && p <= 0.5f){
-            return 0.1f;
+        if((last_valid_active <= 3U && p <= 0.5f) ||
+           (last_valid_active == 4U && p <= 0.001f)){
+            return 0.11f;
         }
         return last_position_error;
     }
@@ -209,10 +210,19 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     if (dbg_odom >= 470.0f && dbg_odom <= 640.0f) {
         target_speed_now = 22.0f;
     }
+		if (dbg_odom >= 3420.0f && dbg_odom <= 3590.0f) {
+        target_speed_now = 22.0f;
+    }
+		if (dbg_odom >= 2150.0f && dbg_odom <= 2300.0f) {
+        target_speed_now = 22.0f;
+    }
+		if (dbg_odom >= 5100.0f && dbg_odom <= 5250.0f) {
+        target_speed_now = 22.0f;
+    }
 
     /* 指定里程段限速：2600~2800、5520~5750 时目标速度 17 */
-    if ((dbg_odom >= 2600.0f && dbg_odom <= 2800.0f) ||
-        (dbg_odom >= 5520.0f && dbg_odom <= 5750.0f)) {
+    if ((dbg_odom >= 2680.0f && dbg_odom <= 2830.0f) ||
+        (dbg_odom >= 5590.0f && dbg_odom <= 5780.0f)) {
         target_speed_now = 17.0f;
     }
 

@@ -282,6 +282,10 @@ void track_update(const track_input_t *in, track_output_t *out)
         if (turned >= TL_RA_EXIT_YAW_DEG) {
             s_state = TS_RA_EXIT;
             s_ra_t0 = now;
+        } else if ((now - s_ra_t0) > TL_RA_RUN_TIMEOUT_MS) {
+            /* 5s 还没出环：直接回 NORMAL，不进 RA_EXIT，不打角 */
+            s_state = TS_NORMAL;
+            out->override = 0U;
         }
         break;
     }
