@@ -45,6 +45,8 @@
 #define TL_RA_INNER_END_DEG      5.0f   /* 净角从最低点回升超过此值，认为内环结束 */
 #define TL_RA_EXIT_KP           0.22f
 #define TL_RA_EXIT_DIFF_MAX     12.0f
+#define TL_RA_EXIT_OFFSET_SMALL_DEG  (-8.0f)   /* 小环出环：右8° */
+#define TL_RA_EXIT_OFFSET_BIG_DEG    (-25.0f)  /* 大环出环：右25° */
 #define TL_RA_EXIT_TIMEOUT_MS   600
 #define TL_RA_RUN_TIMEOUT_MS    4600U   /* 环内 5s 未出环：直接回 NORMAL，不打角 */
 #define TL_RA_COOLDOWN_MS       6000U   /* 出环后 1s 内禁止再次入环 */

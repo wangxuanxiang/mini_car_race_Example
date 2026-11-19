@@ -59,6 +59,7 @@ static float    s_ra_net_max;
 static float    s_ra_comp;
 static uint8_t  s_ra_inner;
 static float    s_ra_inner_min;
+static float    s_ra_exit_offset;   /* 本次环岛的出环偏移 */
 static uint32_t s_ra_t0;
 
 /* ---------------- 初始化 / 陀螺仪零偏 ---------------- */
@@ -70,7 +71,7 @@ void track_init(void)
 
     s_yaw = 0.0f;
     s_gyro_bias = 0.0f;
-    s_odom_cm = 0.0f;
+    s_odom_cm = -46.0f;
     s_last_ms = HAL_GetTick();
 
     s_armed = 1U;
@@ -87,13 +88,14 @@ void track_init(void)
     s_ra_comp = 0.0f;
     s_ra_inner = 0U;
     s_ra_inner_min = 0.0f;
+    s_ra_exit_offset = TL_RA_EXIT_OFFSET_SMALL_DEG;
     s_ra_t0 = 0U;
 
     dbg_state = 0U;
     dbg_yaw = 0.0f;
     dbg_edge_rise = -1.0f;
     dbg_ra_turned = 0.0f;
-    dbg_odom = 0.0f;
+    dbg_odom = -46.0f;
     dbg_ra_dir = 0U;
 }
 
@@ -155,6 +157,7 @@ static void tl_start_ra(uint8_t dir, uint32_t now)
     s_ra_comp = 0.0f;
     s_ra_inner = 0U;
     s_ra_inner_min = 0.0f;
+    s_ra_exit_offset = TL_RA_EXIT_OFFSET_SMALL_DEG;
     dbg_ra_turned = 0.0f;   /* 新环岛从 0 开始打印 */
     s_ra_t0 = now;
     s_state = TS_RA_ENTRY;
@@ -259,6 +262,7 @@ void track_update(const track_input_t *in, track_output_t *out)
                 /* 进入内环：开始记录最低点 */
                 s_ra_inner = 1U;
                 s_ra_inner_min = net;
+                s_ra_exit_offset = TL_RA_EXIT_OFFSET_BIG_DEG;  /* 大环出环偏移 */
             } else if (net > s_ra_net_max) {
                 s_ra_net_max = net;
             }
@@ -291,7 +295,8 @@ void track_update(const track_input_t *in, track_output_t *out)
     }
 
     case TS_RA_EXIT: {
-        float err = tl_ang_diff(s_ra_entry_heading, s_yaw);
+        float target = s_ra_entry_heading + s_ra_exit_offset;
+        float err = tl_ang_diff(target, s_yaw);
         out->diff = tl_clamp(TL_RA_EXIT_KP * err,
                              -TL_RA_EXIT_DIFF_MAX, TL_RA_EXIT_DIFF_MAX);
 
