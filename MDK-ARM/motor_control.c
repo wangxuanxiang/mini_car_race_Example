@@ -207,23 +207,23 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     }
 
     /* 指定里程段限速：470~640 时目标速度 22 */
-		if (dbg_odom >= 1900.0f && dbg_odom <= 2100.0f) {//60度环入口
+		if (dbg_odom >= 1881.0f && dbg_odom <= 2100.0f) {//60度环入口
         target_speed_now = 30.0f;
     }
-		if (dbg_odom >= 4790.0f && dbg_odom <= 5000.0f) {//60度环入口
+		if (dbg_odom >= 4781.0f && dbg_odom <= 5000.0f) {//60度环入口
         target_speed_now = 30.0f;
     }
 		if (dbg_odom >= 2840.0f && dbg_odom <= 2945.0f) {//发车点
-        target_speed_now = 30.0f;//22
+        target_speed_now = 30.0f;
     }
 		if (dbg_odom >= -46 && dbg_odom <= 30.0f) {//发车点
-        target_speed_now = 30.0f;//22
+        target_speed_now = 30.0f;
     }
 		if (dbg_odom >= 750.0f && dbg_odom <= 1060.0f) {//长弯道
-        target_speed_now = 30.0f;//22
+        target_speed_now = 30.0f;
     }
 		if (dbg_odom >= 3655.0f && dbg_odom <= 3965.0f) {//长弯道
-        target_speed_now = 30.0f;//22
+        target_speed_now = 30.0f;
     }
     //if (dbg_odom >= 2445.0f && dbg_odom <= 2550.0f) {//环套环出环口
     //    target_speed_now = 30.0f;
@@ -233,29 +233,29 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     //}
 
     //if (dbg_odom >= 471.0f && dbg_odom <= 640.0f) {//小环岛入环口
-    //    target_speed_now = 21.0f;//22
+    //    target_speed_now = 21.0f;
     //}
 		//if (dbg_odom >= 3361.0f && dbg_odom <= 3530.0f) {//小环岛入环口
-    //    target_speed_now = 21.0f;//22
+    //    target_speed_now = 21.0f;
     //}
 		//下面是直角减速
-		if (dbg_odom >= 390.0f && dbg_odom <= 470.0f) {
-        target_speed_now = 10.0f;//22
+		if (dbg_odom >= 386.0f && dbg_odom <= 460.0f) {
+        target_speed_now = 10.0f;
     }
 		if (dbg_odom >= 3272.0f && dbg_odom <= 3362.0f) {
-        target_speed_now = 10.0f;//22
+        target_speed_now = 10.0f;
     }
 		if (dbg_odom >= 1785.0f && dbg_odom <= 1880.0f) {
-        target_speed_now = 10.0f;//22
+        target_speed_now = 10.0f;
     }
 		if (dbg_odom >= 4675.0f && dbg_odom <= 4780.0f) {
-        target_speed_now = 10.0f;//22
+        target_speed_now = 10.0f;
     }
 		//if (dbg_odom >= 2150.0f && dbg_odom <= 2300.0f) {
-    //    target_speed_now = 20.0f;//22
+    //    target_speed_now = 20.0f;
     //}
 		//if (dbg_odom >= 5100.0f && dbg_odom <= 5250.0f) {
-    //    target_speed_now = 20.0f;//22
+    //    target_speed_now = 20.0f;
     //}
 
     /* 指定里程段限速：2600~2800、5520~5750 时目标速度 17 */
