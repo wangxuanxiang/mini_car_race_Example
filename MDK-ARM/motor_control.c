@@ -142,7 +142,7 @@ float calculate_line_position(uint16_t mux_value){
 
         if((last_valid_active <= 3U && p <= 0.5f) ||
            (last_valid_active == 4U && p <= 0.001f)){
-            return 0.09f;
+            return 0.22f;
         }
         return last_position_error;
     }
@@ -207,23 +207,44 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
     }
 
     /* 指定里程段限速：470~640 时目标速度 22 */
-		if (dbg_odom >= 1881.0f && dbg_odom <= 2100.0f) {//60度环入口
-        target_speed_now = 30.0f;
+		if (dbg_odom >= 1901.0f && dbg_odom <= 2093.0f) {//60度环入口
+        target_speed_now = 35.0f;
     }
-		if (dbg_odom >= 4781.0f && dbg_odom <= 5000.0f) {//60度环入口
-        target_speed_now = 30.0f;
+		if (dbg_odom >= 4841.0f && dbg_odom <= 5030.0f) {//60度环入口
+        target_speed_now = 35.0f;
     }
-		if (dbg_odom >= 2840.0f && dbg_odom <= 2945.0f) {//发车点
-        target_speed_now = 30.0f;
+		if (dbg_odom >= 2875.0f && dbg_odom <= 2975.0f) {//发车点
+        target_speed_now = 40.0f;
     }
 		if (dbg_odom >= -46 && dbg_odom <= 30.0f) {//发车点
-        target_speed_now = 30.0f;
+        target_speed_now = 40.0f;
     }
-		if (dbg_odom >= 750.0f && dbg_odom <= 1060.0f) {//长弯道
-        target_speed_now = 30.0f;
+		if (dbg_odom >= 730.0f && dbg_odom <= 1060.0f) {//长弯道
+        target_speed_now = 35.0f;
     }
-		if (dbg_odom >= 3655.0f && dbg_odom <= 3965.0f) {//长弯道
-        target_speed_now = 30.0f;
+		if (dbg_odom >= 3690.0f && dbg_odom <= 4010.0f) {//长弯道
+        target_speed_now = 35.0f;
+    }
+		
+		if (dbg_odom >= 1140.0f && dbg_odom <= 1315.0f) {//断路2945
+        target_speed_now = 35.0f;
+    }
+		if (dbg_odom >= 4085.0f && dbg_odom <= 4265.0f) {//断路 
+        target_speed_now = 35.0f;
+    }
+		
+		if (dbg_odom >= 1593.0f && dbg_odom <= 1673.0f) {//左侧长直道
+        target_speed_now = 35.0f;
+    }
+		if (dbg_odom >= 4543.0f && dbg_odom <= 4619.0f) {//左侧长直道
+        target_speed_now = 35.0f;
+    }
+		
+		if (dbg_odom >= 2285.0f && dbg_odom <= 2465.0f) {//8字内 
+        target_speed_now = 35.0f;
+    }
+		if (dbg_odom >= 5219.0f && dbg_odom <= 5399.0f) {//8字内
+        target_speed_now = 35.0f;
     }
     //if (dbg_odom >= 2445.0f && dbg_odom <= 2550.0f) {//环套环出环口
     //    target_speed_now = 30.0f;
@@ -238,17 +259,17 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
 		//if (dbg_odom >= 3361.0f && dbg_odom <= 3530.0f) {//小环岛入环口
     //    target_speed_now = 21.0f;
     //}
-		//下面是直角减速
-		if (dbg_odom >= 386.0f && dbg_odom <= 460.0f) {
+		//下面是直角减速 
+		if (dbg_odom >= 386.0f && dbg_odom <= 441.0f) {
         target_speed_now = 10.0f;
     }
-		if (dbg_odom >= 3272.0f && dbg_odom <= 3362.0f) {
+		if (dbg_odom >= 3317.0f && dbg_odom <= 3381.0f) {
         target_speed_now = 10.0f;
     }
-		if (dbg_odom >= 1785.0f && dbg_odom <= 1880.0f) {
+		if (dbg_odom >= 1805.0f && dbg_odom <= 1900.0f) {
         target_speed_now = 10.0f;
     }
-		if (dbg_odom >= 4675.0f && dbg_odom <= 4780.0f) {
+		if (dbg_odom >= 4762.0f && dbg_odom <= 4840.0f) {//1590 +90
         target_speed_now = 10.0f;
     }
 		//if (dbg_odom >= 2150.0f && dbg_odom <= 2300.0f) {

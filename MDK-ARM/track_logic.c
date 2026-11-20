@@ -60,6 +60,7 @@ static float    s_ra_comp;
 static uint8_t  s_ra_inner;
 static float    s_ra_inner_min;
 static float    s_ra_exit_offset;   /* 本次环岛的出环偏移 */
+static uint32_t s_ra_start_t0;      /* 入环触发时刻 */
 static uint32_t s_ra_t0;
 
 /* ---------------- 初始化 / 陀螺仪零偏 ---------------- */
@@ -89,6 +90,7 @@ void track_init(void)
     s_ra_inner = 0U;
     s_ra_inner_min = 0.0f;
     s_ra_exit_offset = TL_RA_EXIT_OFFSET_SMALL_DEG;
+    s_ra_start_t0 = 0U;
     s_ra_t0 = 0U;
 
     dbg_state = 0U;
@@ -158,6 +160,7 @@ static void tl_start_ra(uint8_t dir, uint32_t now)
     s_ra_inner = 0U;
     s_ra_inner_min = 0.0f;
     s_ra_exit_offset = TL_RA_EXIT_OFFSET_SMALL_DEG;
+    s_ra_start_t0 = now;
     dbg_ra_turned = 0.0f;   /* 新环岛从 0 开始打印 */
     s_ra_t0 = now;
     s_state = TS_RA_ENTRY;
@@ -283,7 +286,8 @@ void track_update(const track_input_t *in, track_output_t *out)
 
         out->override = 0U;   /* 环内用 PPDD * 1.0，不用1.5 */
 
-        if (turned >= TL_RA_EXIT_YAW_DEG) {
+        if (turned >= TL_RA_EXIT_YAW_DEG &&
+            (now - s_ra_start_t0) >= TL_RA_MIN_RUN_MS) {
             s_state = TS_RA_EXIT;
             s_ra_t0 = now;
         } else if ((now - s_ra_t0) > TL_RA_RUN_TIMEOUT_MS) {
