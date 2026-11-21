@@ -142,7 +142,7 @@ float calculate_line_position(uint16_t mux_value){
 
         if((last_valid_active <= 3U && p <= 0.5f) ||
            (last_valid_active == 4U && p <= 0.001f)){
-            return 0.22f;
+            return 0.20f;//1号图设为0.22 2号图设为0.19 3号图设为0.20
         }
         return last_position_error;
     }
@@ -213,7 +213,7 @@ void parallel_pid_control(uint16_t mux_value,float gyro_z,float left_encoder,flo
 		if (dbg_odom >= 4841.0f && dbg_odom <= 5030.0f) {//60度环入口
         target_speed_now = 35.0f;
     }
-		if (dbg_odom >= 2875.0f && dbg_odom <= 2975.0f) {//发车点
+		if (dbg_odom >= 2888.0f && dbg_odom <= 2975.0f) {//发车点
         target_speed_now = 40.0f;
     }
 		if (dbg_odom >= -46 && dbg_odom <= 30.0f) {//发车点
